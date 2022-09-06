@@ -45,10 +45,7 @@ void CoreInfoEM::updateMTTF()
 	float rel_exp;		/* exponent in MTTF equation for Electron migration	*/
 	float fits_ratio;
 
-// TODO: get a better act value from somewhere. In lifesim these are fixed to 1.0 and stored in the file 'pv-file.txt' */
-    float act = 1.0;
-
-	act_ratio = act;
+	act_ratio = pv_param;
 	temp_diff = (1.0/Constants_EM::T_base) - (1.0/T); 
 	rel_exp = Constants_EM::EM_Ea_div_k*temp_diff; 
 	fits_ratio = ((pow((act_ratio),1.1))*(pow(2.718,rel_exp))/(1.0))*(pow((6.0/6.0),1.1));
