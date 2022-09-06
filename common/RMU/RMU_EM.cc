@@ -108,7 +108,7 @@ void CoreInfoEM::updateMTTF()
 
 		stress = Constants_EM::q*Constants_EM::Z*Constants_EM::resistivity_Cu*curden*Constants_EM::L/2/Constants_EM::Omega+Constants_EM::rstress;
 
-		t_nuc = Constants_EM::L*Constants_EM::L/kappa*exp(-Constants_EM::f*Constants_EM::Omega/Constants_EM::kB/T*stress)*log((stress-Constants_EM::rstress)/(stress-Constants_EM::cstress));
+		t_nuc = Constants_EM::L*Constants_EM::L/kappa*exp(-0.9*Constants_EM::Omega/Constants_EM::kB/T*stress)*log((stress-Constants_EM::rstress)/(stress-Constants_EM::cstress));
 
 		velocity = D*Constants_EM::q*Constants_EM::Z*Constants_EM::resistivity_Cu*curden/Constants_EM::kB/T;
 		R_incr_rate = velocity*(Constants_EM::resistivity_Ta/hTa/(2*H+hTa)-Constants_EM::resistivity_Cu/H/W);
