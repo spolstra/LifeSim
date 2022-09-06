@@ -62,7 +62,7 @@ def parse_temperature():
 			plt.yticks(range(0,X+1))
 			plt.title ("Temperature Map of the NxN Cores")
 			plt.savefig (graphs_folder+"/" + "temp" + "/" + file_name+".png")
-			plt.show()
+			#plt.show()
 			plt.clf()
 
 def parse_mttf():
@@ -109,7 +109,7 @@ def parse_mttf():
 			plt.title ("MTTF Map of the NxN Cores")
 			plt.axis ([0,Y,0,X])
 			plt.savefig (graphs_folder+"/" + "mttf" + "/" +file_name+".png")
-			plt.show()
+			#plt.show()
 			plt.clf()
 				
 	min_mttfs = [7,6,5,4,3]
@@ -122,7 +122,7 @@ def parse_mttf():
 	plt.xlabel("Epoch Numbers")
 	plt.xticks(np.arange(0, max(min_mttfs)+1, 1.0))
 	plt.savefig (graphs_folder+"mttf_over_time"+".png")
-	plt.show()
+	#plt.show()
 	plt.clf()
 
 def parse_power():
@@ -161,7 +161,7 @@ def parse_power():
 				plt.annotate ('%.1f' % txt,(i,power_total[i]))
 
 			plt.savefig(graphs_folder+"/" + "power" + "/" +file_name+".png")
-			plt.show()
+			#plt.show()
 			plt.clf()
 
 			current_epoch += 1
