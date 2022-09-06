@@ -7,125 +7,68 @@
 
 CoreInfoEM::CoreInfoEM()
  :  CoreInfo()
-	, core_capacitance(0.0)
-	, H(0.0)
-	, W(0.0)
-	, hTa(0.0)
-	, delta_R(0.0)
+ , EM_fits(0.0)
+ , EM_base_fits(0.0)
+ , EM_inst(0.0)
 {
+    int num_cores = Sim()->getConfig()->getApplicationCores();
+
+	/*
+	*  We are dividing the TOTAL_EM_FITS by the number of cores as it was previously (unit_area / total_area), which is the same as the number of cores in our case
+	*/
+
+	EM_base_fits = (Constants_EM::TOTAL_EM_FITS)/(double)num_cores;
+
+	/* Comment from RAMP 2.0 */
+	/* Initial FIT values are same as base FIT values */
+
+	EM_fits = (Constants_EM::TOTAL_EM_FITS)/(double)num_cores;
 }
 
 CoreInfoEM::~CoreInfoEM()
 {
 }
 
-// Overriden Function
+/* Note: pv_param is not used in the RAMP2.0 EM code. */
 void CoreInfoEM::setPVParam(double process_variation_parameter)
 {
 	pv_param = process_variation_parameter;
 	frequency = pv_param * frequency;
-	core_capacitance = pv_param * Constants_EM::C0;
-	H = pv_param * Constants_EM::H0;
-	W = pv_param * Constants_EM::W0;
-	hTa = pv_param * Constants_EM::hTa0;
-}
-void CoreInfoEM::updateAging()
-{
-	double D;
-	double current,curden;
-	double velocity;
-	double R_incr_rate;
-	double change_in_resistance;
-	double delta_V,delta_freq;
-	double length_of_epoch_in_sec = (double) Sim()->getCfg()->getFloat("general/epoch_length");
-
-
-	D = Constants_EM::D0*exp(-(Constants_EM::EV+Constants_EM::EVD)/Constants_EM::kB/T);
-	
-	current = 325 * 2 * 3.14 * frequency * core_capacitance * V * beta_factor;
-	curden = current/W/H;
-
-	velocity = D*Constants_EM::q*Constants_EM::Z*Constants_EM::resistivity_Cu*curden/Constants_EM::kB/T;
-	R_incr_rate = velocity*(Constants_EM::resistivity_Ta/hTa/(2*H+hTa)-Constants_EM::resistivity_Cu/H/W);
-
-	change_in_resistance = R_incr_rate * length_of_epoch_in_sec;
-	delta_R += change_in_resistance;
-
-	delta_V  = -(current * change_in_resistance);
-	V += delta_V;
-
-	delta_freq = delta_V * (frequency/V);
-	frequency += delta_freq;
+	V = pv_param * V;
 }
 
 void CoreInfoEM::updateMTTF()
 {
-	double D;
-	double current,curden;
-	double velocity;
-	double R_incr_rate;
-	double R0;
-	double t_grow;
-	double t_nuc;
-	double kappa;
-	double stress;
+    /* The RAMP2.0 code for the EM failure model */
+	float act_ratio;	/* Activity ratio - between base and current sample*/
+	float temp_diff;	/* Temperature difference between base and current sample*/
+	float rel_exp;		/* exponent in MTTF equation for Electron migration	*/
+	float fits_ratio;
 
+// TODO: get a better act value from somewhere. In lifesim these are fixed to 1.0 and stored in the file 'pv-file.txt' */
+    float act = 1.0;
 
-	double max_mttf_years = (double)Sim()->getCfg()->getFloat("general/max_mttf_years");
+	act_ratio = act;
+	temp_diff = (1.0/Constants_EM::T_base) - (1.0/T); 
+	rel_exp = Constants_EM::EM_Ea_div_k*temp_diff; 
+	fits_ratio = ((pow((act_ratio),1.1))*(pow(2.718,rel_exp))/(1.0))*(pow((6.0/6.0),1.1));
 
-	if (delta_R != 0.0)
+	if (hyper_period_number > 1)
 	{
-		D = Constants_EM::D0*exp(-(Constants_EM::EV+Constants_EM::EVD)/Constants_EM::kB/T);
-		
-		if (isActive)
-			current = 325 * 2 * 3.14 * frequency * core_capacitance * V * beta_factor;
-		else
-			current = 0.000001;
-
-		curden = current/W/H;
-
-		velocity = D*Constants_EM::q*Constants_EM::Z*Constants_EM::resistivity_Cu*curden/Constants_EM::kB/T;
-		R_incr_rate = velocity*(Constants_EM::resistivity_Ta/hTa/(2*H+hTa)-Constants_EM::resistivity_Cu/H/W);
-
-		R0 = Constants_EM::resistivity_Cu*Constants_EM::L/W/H;
-
-		double failure_criterion = (double)Sim()->getCfg()->getFloat("general/failure_criterion");
-
-		t_grow = ((failure_criterion*R0)/100 - delta_R)/R_incr_rate;
-
-		MTTF = t_grow;
-
-		if (MTTF > (max_mttf_years * pv_param * 60 * 60 * 24 * 365))
-			MTTF = (max_mttf_years * pv_param * 60 * 60 * 24 * 365);
+		EM_fits =( EM_fits*(hyper_period_number-1) + fits_ratio*EM_base_fits)/hyper_period_number;	/* update running average of FITS */
 	}
-	else if (isActive)
-	{
-		D = Constants_EM::D0*exp(-(Constants_EM::EV+Constants_EM::EVD)/Constants_EM::kB/T);
-		kappa = D*Constants_EM::B*Constants_EM::Omega/Constants_EM::kB/T;
+	
+	EM_inst = fits_ratio*EM_base_fits;	/* Instantaneous values of FITS*/
 
-		current = 325 * 2 * 3.14 * frequency * core_capacitance * V * beta_factor;
-		curden = current/W/H;
+    /* TODO: we use an initial fit value of 4000, that gives a MTTF of 30 years.
+     * We could use the max_mttf_years to set the initial fit value. */
+//	double max_mttf_years = (double)Sim()->getCfg()->getFloat("general/max_mttf_years");
 
-		stress = Constants_EM::q*Constants_EM::Z*Constants_EM::resistivity_Cu*curden*Constants_EM::L/2/Constants_EM::Omega+Constants_EM::rstress;
-
-		t_nuc = Constants_EM::L*Constants_EM::L/kappa*exp(-0.9*Constants_EM::Omega/Constants_EM::kB/T*stress)*log((stress-Constants_EM::rstress)/(stress-Constants_EM::cstress));
-
-		velocity = D*Constants_EM::q*Constants_EM::Z*Constants_EM::resistivity_Cu*curden/Constants_EM::kB/T;
-		R_incr_rate = velocity*(Constants_EM::resistivity_Ta/hTa/(2*H+hTa)-Constants_EM::resistivity_Cu/H/W);
-
-		R0 = Constants_EM::resistivity_Cu*Constants_EM::L/W/H;
-
-		double failure_criterion = (double)Sim()->getCfg()->getFloat("general/failure_criterion");
-
-		t_grow = failure_criterion*R0/100/R_incr_rate;
-
-		MTTF = t_grow + t_nuc;
-
-		if (MTTF > (max_mttf_years * pv_param * 60 * 60 * 24 * 365))
-			MTTF = (max_mttf_years * pv_param * 60 * 60 * 24 * 365);
-	}
-	else
-	{
-		MTTF = (max_mttf_years * pv_param * 60 * 60 * 24 * 365);
-	}
+    /* 
+	* Comment from RAMP 2.0
+	* The MTTF value of each structure due to each failure mechanism depends on its
+ 	* FIT value. 1 FIT represents one failure in 10E9 operating hours. Therefore, a
+ 	* FIT value of 3805.17503 gives an MTTF of 30 years. 
+ 	*/
+ 	MTTF = (30.0*3805.17503)/EM_inst;
 }
