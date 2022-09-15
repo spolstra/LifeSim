@@ -2,6 +2,7 @@
 #include "simulator.h"
 #include "config.hpp"
 #include "RMU_EM.h"
+#include "RMU_EM_blacks.h"
 #include "RMU_TDDB.h"
 #include "RMU_TC.h"
 #include "RMU_NBTI.h"
@@ -36,6 +37,12 @@ RMU::RMU()
 		for (int i=0;i<num_cores;i++)
 			coreList.push_back(new CoreInfoEM());
 	}
+    else if (failure_mehcanism == "electromigration_blacks")
+	{
+		for (int i=0;i<num_cores;i++)
+			coreList.push_back(new CoreInfoEM_blacks());
+	}
+
 	else if (failure_mehcanism == "tddb")
 	{
 		for (int i=0;i<num_cores;i++)
